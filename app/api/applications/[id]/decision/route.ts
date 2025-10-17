@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'https://api.database-service.com';
+const DATABASE_SERVICE_API_KEY = process.env.DATABASE_SERVICE_API_KEY;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -8,6 +11,13 @@ export async function POST(
     const id = parseInt(params.id);
     const { decision, notes } = await request.json();
 
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid application ID' },
+        { status: 400 }
+      );
+    }
+
     if (!decision || !['approve', 'request_documents', 'decline'].includes(decision)) {
       return NextResponse.json(
         { error: 'Invalid decision type' },
@@ -15,8 +25,7 @@ export async function POST(
       );
     }
 
-    await new Promise(resolve => setTimeout(resolve, 500));
-
+    // Map decision to status
     let newStatus: string;
     switch (decision) {
       case 'approve':
@@ -32,7 +41,38 @@ export async function POST(
         newStatus = 'Pending Review';
     }
 
-    console.log(`Decision for application ${id}:`, { decision, notes, newStatus });
+    // Update application in database
+    const updateResponse = await fetch(`${DATABASE_SERVICE_URL}/api/applications/${id}/decision`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DATABASE_SERVICE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        decision,
+        notes,
+        newStatus,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+
+    if (!updateResponse.ok) {
+      throw new Error(`Failed to update application: ${updateResponse.status}`);
+    }
+
+    // Add to timeline
+    await fetch(`${DATABASE_SERVICE_URL}/api/applications/${id}/timeline`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DATABASE_SERVICE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event: `Decision: ${newStatus.toUpperCase()}`,
+        timestamp: new Date().toISOString(),
+        note: notes || undefined,
+      }),
+    });
 
     return NextResponse.json({
       success: true,

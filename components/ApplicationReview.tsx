@@ -61,7 +61,19 @@ const getDecisionRecommendation = (creditColor: string, incomeColor: string): De
 };
 
 const useRiskAssessment = (data: Partial<ApplicationData>): RiskData => {
-  const { creditScore, monthlyFee, disposableIncome, creditRisk, incomeRatio } = data;
+  const { 
+    creditScore, 
+    monthlyFee, 
+    monthlySchoolFees, 
+    disposableIncome, 
+    monthlyDisposableIncome,
+    creditRisk, 
+    incomeRatio 
+  } = data;
+
+  // Use either monthlyFee or monthlySchoolFees for backward compatibility
+  const effectiveMonthlyFee = monthlyFee || monthlySchoolFees || 0;
+  const effectiveDisposableIncome = disposableIncome || monthlyDisposableIncome || 0;
 
   // Credit Risk Logic
   const creditResult = useMemo((): CreditResult => {
@@ -92,8 +104,8 @@ const useRiskAssessment = (data: Partial<ApplicationData>): RiskData => {
 
   // Income Ratio Logic
   const incomeResult = useMemo((): IncomeResult => {
-    const fees = monthlyFee || 0;
-    const income = disposableIncome || 0;
+    const fees = effectiveMonthlyFee;
+    const income = effectiveDisposableIncome;
     const ratioPct = incomeRatio || 0;
 
     if (!fees || !income || income === 0) {
@@ -113,7 +125,7 @@ const useRiskAssessment = (data: Partial<ApplicationData>): RiskData => {
     }
 
     return { color, copy: `${ratioPct}% (${description})`, ratioPct, description };
-  }, [monthlyFee, disposableIncome, incomeRatio]);
+  }, [effectiveMonthlyFee, effectiveDisposableIncome, incomeRatio]);
 
   // Decision Recommendation
   const decisionRecommendation = useMemo((): DecisionRecommendation => {
@@ -223,8 +235,12 @@ const RiskAssessmentCard = ({ data, riskData }: { data: ApplicationData; riskDat
   const creditClasses = getColorClasses(riskData.creditResult.color);
   const incomeClasses = getColorClasses(riskData.incomeResult.color);
   
-  const feeFormatted = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0 }).format(data.monthlyFee);
-  const incomeFormatted = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0 }).format(data.disposableIncome);
+  // Use either monthlyFee or monthlySchoolFees
+  const monthlyFee = data.monthlyFee || data.monthlySchoolFees || 0;
+  const disposableIncome = data.disposableIncome || data.monthlyDisposableIncome || 0;
+  
+  const feeFormatted = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0 }).format(monthlyFee);
+  const incomeFormatted = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0 }).format(disposableIncome);
 
   return (
     <Card title="Risk Assessment">

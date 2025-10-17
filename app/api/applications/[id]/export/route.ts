@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'https://api.database-service.com';
+const DATABASE_SERVICE_API_KEY = process.env.DATABASE_SERVICE_API_KEY;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -8,6 +11,13 @@ export async function POST(
     const id = parseInt(params.id);
     const { format = 'csv' } = await request.json();
 
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid application ID' },
+        { status: 400 }
+      );
+    }
+
     if (!['csv', 'pdf'].includes(format)) {
       return NextResponse.json(
         { error: 'Invalid format' },
@@ -15,18 +25,29 @@ export async function POST(
       );
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Fetch current application data for export
+    const applicationResponse = await fetch(`${DATABASE_SERVICE_URL}/api/applications/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${DATABASE_SERVICE_API_KEY}`,
+      },
+    });
+
+    if (!applicationResponse.ok) {
+      throw new Error('Failed to fetch application data for export');
+    }
+
+    const applicationData = await applicationResponse.json();
 
     if (format === 'csv') {
       const csvContent = [
         'Application ID,Student Name,Grade,Date of Birth,Previous School',
-        `12345,"Sarah Johnson",8,2010-03-15,"Greenfield Primary"`,
+        `${applicationData.id},"${applicationData.student.name}",${applicationData.student.grade},${applicationData.student.dob},"${applicationData.student.previousSchool}"`,
         '',
         'Parent Name,Email,Phone,Address',
-        `"Michael Johnson","m.johnson@email.com","+27 82 123 4567","123 Oak Street, Cape Town"`,
+        `"${applicationData.parent.name}","${applicationData.parent.email}","${applicationData.parent.phone}","${applicationData.parent.address}"`,
         '',
         'Risk Assessment,Credit Score,Income Ratio,Monthly Fee,Disposable Income,Status',
-        `High,580,45,4500,10000,Pending Review`
+        `${applicationData.creditRisk},${applicationData.creditScore},${applicationData.incomeRatio},${applicationData.monthlyFee},${applicationData.disposableIncome},${applicationData.status}`
       ].join('\n');
 
       return new NextResponse(csvContent, {
@@ -36,11 +57,27 @@ export async function POST(
         },
       });
     } else {
+      // For PDF, you might use a service like Puppeteer or a PDF generation API
+      const pdfServiceResponse = await fetch(`${DATABASE_SERVICE_URL}/api/applications/${id}/export/pdf`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${DATABASE_SERVICE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(applicationData),
+      });
+
+      if (!pdfServiceResponse.ok) {
+        throw new Error('PDF generation service unavailable');
+      }
+
+      const pdfResult = await pdfServiceResponse.json();
+
       return NextResponse.json({
         success: true,
         format: 'pdf',
         message: 'PDF export initiated',
-        downloadUrl: `/api/applications/${id}/export/pdf?token=${Date.now()}`,
+        downloadUrl: pdfResult.downloadUrl,
       });
     }
   } catch (error) {
