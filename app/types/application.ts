@@ -1,4 +1,6 @@
-// types/application.ts
+
+import React from 'react';
+
 export interface StudentData {
   name: string;
   grade: number;
@@ -43,4 +45,45 @@ export interface ApplicationData {
   monthlyDisposableIncome?: number;
   creditCheckStatus?: 'complete' | 'pending' | 'failed';
   incomeDocsStatus?: 'verified' | 'under_review' | 'missing' | 'failed';
+}
+
+// Risk Assessment Types
+export interface CreditResult {
+  color: string;
+  copy: string;
+  band: string | null;
+  description: string;
+  score?: number;
+}
+
+export interface IncomeResult {
+  color: string;
+  copy: string;
+  ratioPct: number | null;
+  description: string;
+}
+
+export interface DecisionRecommendation {
+  copy: string;
+  icon: React.ComponentType<any>;
+  color: string;
+}
+
+export interface RiskBadge {
+  type: string;
+  status: string;
+}
+
+export interface RiskData {
+  creditResult: CreditResult;
+  incomeResult: IncomeResult;
+  decisionRecommendation: DecisionRecommendation;
+  headerBadges: RiskBadge[];
+}
+
+// API Response Types
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  usingFallback?: boolean;
 }

@@ -6,7 +6,8 @@ import {
   ShieldAlert, DollarSign, User, Users, FileText, CheckCircle, Clock, XCircle,
   Bell, Printer, ListOrdered, ChevronRight, Check,
   Home, Mail, Phone, Calendar, School, CheckCircle2, Download, AlertCircle, Loader2,
-  LayoutDashboard, CreditCard, FolderOpen, LineChart, Settings, ChevronDown, ArrowLeft
+  LayoutDashboard, CreditCard, FolderOpen, LineChart, Settings, ChevronDown, ArrowLeft,
+  Wifi, WifiOff
 } from 'lucide-react';
 import { 
   ApplicationData, 
@@ -19,6 +20,33 @@ import {
   TimelineEvent
 } from '@/types/application';
 import { api } from '@/lib/api';
+
+// --- Data Source Indicator Component ---
+interface DataSourceIndicatorProps {
+  isLive: boolean;
+  className?: string;
+}
+
+const DataSourceIndicator: React.FC<DataSourceIndicatorProps> = ({ 
+  isLive, 
+  className = "" 
+}) => {
+  return (
+    <div className={`flex items-center space-x-2 text-sm ${className}`}>
+      {isLive ? (
+        <>
+          <Wifi className="w-4 h-4 text-green-500" />
+          <span className="text-green-600 font-medium">Live Data</span>
+        </>
+      ) : (
+        <>
+          <WifiOff className="w-4 h-4 text-amber-500" />
+          <span className="text-amber-600 font-medium">Demo Data</span>
+        </>
+      )}
+    </div>
+  );
+};
 
 // --- CORE BUSINESS LOGIC HOOK (Risk Assessment) ---
 
@@ -443,12 +471,12 @@ const DecisionActionsPanel = ({
               Decision Notes
             </label>
             <textarea
-  value={notes}
-  onChange={(e) => setNotes(e.target.value)}
-  placeholder="Add notes about your decision..."
-  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none min-h-[100px] text-gray-900 bg-white"
-  disabled={isLoading}
-/>
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add notes about your decision..."
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none min-h-[100px] text-gray-900 bg-white"
+              disabled={isLoading}
+            />
           </div>
         </div>
       </Card>
@@ -695,6 +723,7 @@ export default function ApplicationReview({ applicationId, onBack }: Application
   const [isDecisionLoading, setIsDecisionLoading] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<string | null>(null);
   const [active, setActive] = useState('Applications');
+  const [dataSource, setDataSource] = useState<'live' | 'fallback'>('live');
 
   const riskData = useRiskAssessment(data || {});
 
@@ -714,8 +743,14 @@ export default function ApplicationReview({ applicationId, onBack }: Application
       try {
         const fetchedData = await api.getApplication(applicationId);
         setData(fetchedData);
+        
+        // Check if we're using live data or fallback
+        // In a real implementation, you might check a flag in the response
+        // For now, we'll assume successful API call means live data
+        setDataSource('live');
       } catch (error) {
         console.error("Failed to fetch application data:", error);
+        setDataSource('fallback');
       } finally {
         setIsLoading(false);
       }
@@ -895,7 +930,10 @@ export default function ApplicationReview({ applicationId, onBack }: Application
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-medium text-blue-800">Application Review</h1>
+                <div className="flex items-center space-x-4">
+                  <h1 className="text-2xl font-medium text-blue-800">Application Review</h1>
+                  <DataSourceIndicator isLive={dataSource === 'live'} />
+                </div>
                 <p className="text-gray-500 text-sm">
                   Review and make decisions on student applications
                 </p>

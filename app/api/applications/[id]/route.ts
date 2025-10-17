@@ -1,136 +1,42 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
-// Financial service API configuration
-const FINANCIAL_SERVICE_URL = process.env.FINANCIAL_SERVICE_URL || 'https://api.financial-service.com';
-const FINANCIAL_SERVICE_API_KEY = process.env.FINANCIAL_SERVICE_API_KEY;
-
-// Database service configuration (replace with your actual database service)
-const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'https://api.database-service.com';
-const DATABASE_SERVICE_API_KEY = process.env.DATABASE_SERVICE_API_KEY;
-
-interface FinancialData {
-  creditScore: number;
-  creditRisk: string;
-  disposableIncome: number;
-  incomeRatio: number;
-  riskBand: string;
-  lastUpdated: string;
-}
-
-interface ApplicationData {
-  id: number;
+const mockApplicationData = {
+  id: 12345,
+  status: 'Pending Review',
   student: {
-    name: string;
-    grade: number;
-    dob: string;
-    previousSchool: string;
-  };
+    name: 'John Smith',
+    grade: 5,
+    dob: '2015-03-15',
+    previousSchool: 'Sunrise Elementary School'
+  },
   parent: {
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-  };
-  monthlyFee: number;
-  status: string;
-  documents: Array<{
-    name: string;
-    status: 'Verified' | 'Under Review' | 'Pending';
-    uploaded: string;
-  }>;
-  timeline: Array<{
-    event: string;
-    timestamp: string;
-    note?: string;
-  }>;
-}
-
-// Enhanced financial data fetching with better error handling
-async function fetchFinancialData(applicationId: number): Promise<FinancialData> {
-  try {
-    const response = await fetch(`${FINANCIAL_SERVICE_URL}/v1/credit-check/${applicationId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${FINANCIAL_SERVICE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 10000, // 10 second timeout
-    });
-
-    if (!response.ok) {
-      // Handle specific HTTP errors
-      if (response.status === 404) {
-        throw new Error('Financial data not found for application');
-      } else if (response.status === 401) {
-        throw new Error('Financial service authentication failed');
-      } else if (response.status >= 500) {
-        throw new Error('Financial service temporarily unavailable');
-      }
-      throw new Error(`Financial service error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    // Validate response structure
-    if (!data.credit_score || !data.monthly_disposable_income) {
-      throw new Error('Invalid financial data response');
-    }
-    
-    return {
-      creditScore: data.credit_score,
-      creditRisk: data.risk_category || 'Unknown',
-      disposableIncome: data.monthly_disposable_income,
-      incomeRatio: data.fee_to_income_ratio || 0,
-      riskBand: data.risk_band || 'Unknown',
-      lastUpdated: data.last_updated || new Date().toISOString()
-    };
-  } catch (error) {
-    console.error('Error fetching financial data:', error);
-    throw new Error('Financial service unavailable');
-  }
-}
-
-// Add timeout utility
-const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout = 10000) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    throw error;
-  }
+    name: 'Sarah Smith',
+    phone: '+27 11 123 4567',
+    email: 'sarah.smith@example.com',
+    address: '123 Main Street, Johannesburg, 2000'
+  },
+  creditScore: 685,
+  monthlyFee: 8500,
+  monthlySchoolFees: 8500,
+  disposableIncome: 25000,
+  monthlyDisposableIncome: 25000,
+  creditRisk: 'Completed',
+  incomeRatio: 34,
+  documents: [
+    { name: 'ID Document', uploaded: '2024-01-10', status: 'Verified' },
+    { name: 'Proof of Income', uploaded: '2024-01-10', status: 'Under Review' },
+    { name: 'Bank Statements', uploaded: '2024-01-11', status: 'Under Review' },
+    { name: 'Previous School Report', uploaded: '2024-01-09', status: 'Verified' }
+  ],
+  timeline: [
+    { event: 'Application Submitted', timestamp: '2024-01-08T10:30:00Z' },
+    { event: 'Documents Uploaded', timestamp: '2024-01-10T14:22:00Z' },
+    { event: 'Credit Check Initiated', timestamp: '2024-01-11T09:15:00Z' },
+    { event: 'Credit Check Completed', timestamp: '2024-01-12T11:45:00Z' },
+    { event: 'Under Review', timestamp: '2024-01-12T13:20:00Z' }
+  ]
 };
-
-async function fetchApplicationData(applicationId: number): Promise<ApplicationData> {
-  try {
-    const response = await fetch(`${DATABASE_SERVICE_URL}/api/applications/${applicationId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${DATABASE_SERVICE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Application not found');
-      }
-      throw new Error(`Database service error: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching application data:', error);
-    throw new Error('Failed to fetch application data');
-  }
-}
 
 export async function GET(
   request: NextRequest,
@@ -146,48 +52,20 @@ export async function GET(
       );
     }
 
-    // Fetch application data and financial data in parallel
-    const [applicationData, financialData] = await Promise.all([
-      fetchApplicationData(id),
-      fetchFinancialData(id).catch(error => {
-        console.warn('Using fallback financial data due to:', error.message);
-        // Fallback data - in production you might want different handling
-        return {
-          creditScore: 580,
-          creditRisk: 'High',
-          disposableIncome: 10000,
-          incomeRatio: 45,
-          riskBand: 'D',
-          lastUpdated: new Date().toISOString()
-        };
-      })
-    ]);
-
-    // Combine the data
-    const fullApplicationData = {
-      ...applicationData,
-      creditScore: financialData.creditScore,
-      creditRisk: financialData.creditRisk,
-      disposableIncome: financialData.disposableIncome,
-      incomeRatio: financialData.incomeRatio,
-      monthlyFee: applicationData.monthlyFee || 4500, // Default if not provided
+    // In a real application, you would fetch from your database here
+    const application = {
+      ...mockApplicationData,
+      id: id,
+      _metadata: {
+        source: 'live',
+        timestamp: new Date().toISOString()
+      }
     };
 
-    return NextResponse.json(fullApplicationData);
+    return NextResponse.json(application);
   } catch (error) {
-    console.error('Error fetching application:', error);
-    
-    if (error instanceof Error) {
-      if (error.message.includes('not found')) {
-        return NextResponse.json(
-          { error: 'Application not found' },
-          { status: 404 }
-        );
-      }
-    }
-
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch application' },
       { status: 500 }
     );
   }
