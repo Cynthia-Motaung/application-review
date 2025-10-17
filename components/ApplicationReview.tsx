@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -5,9 +6,8 @@ import {
   ShieldAlert, DollarSign, User, Users, FileText, CheckCircle, Clock, XCircle,
   Bell, Printer, ListOrdered, ChevronRight, Check,
   Home, Mail, Phone, Calendar, School, CheckCircle2, Download, AlertCircle, Loader2,
-  LayoutDashboard, CreditCard, FolderOpen, LineChart, Settings
+  LayoutDashboard, CreditCard, FolderOpen, LineChart, Settings, ChevronDown, ArrowLeft
 } from 'lucide-react';
-import { useParams } from 'next/navigation';
 import { 
   ApplicationData, 
   RiskData,
@@ -443,12 +443,12 @@ const DecisionActionsPanel = ({
               Decision Notes
             </label>
             <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add notes about your decision..."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none min-h-[100px]"
-              disabled={isLoading}
-            />
+  value={notes}
+  onChange={(e) => setNotes(e.target.value)}
+  placeholder="Add notes about your decision..."
+  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none min-h-[100px] text-gray-900 bg-white"
+  disabled={isLoading}
+/>
           </div>
         </div>
       </Card>
@@ -633,12 +633,63 @@ const PreviewModal = ({
   );
 };
 
+// Export Dropdown Component
+const ExportDropdown = ({ 
+  onExportPDF, 
+  onExportCSV 
+}: { 
+  onExportPDF: () => void; 
+  onExportCSV: () => void; 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center space-x-2 bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg"
+      >
+        <Download className="h-4 w-4" />
+        <span>Export</span>
+        <ChevronDown className="h-4 w-4" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+          <button
+            onClick={() => {
+              onExportPDF();
+              setIsOpen(false);
+            }}
+            className="flex items-center space-x-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Export as PDF</span>
+          </button>
+          <button
+            onClick={() => {
+              onExportCSV();
+              setIsOpen(false);
+            }}
+            className="flex items-center space-x-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-b-lg"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Export as CSV</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- MAIN APPLICATION COMPONENT ---
 
-export default function ApplicationReview() {
-  const { id } = useParams();
-  const applicationId = parseInt(id as string) || 12345;
-  
+interface ApplicationReviewProps {
+  applicationId: number;
+  onBack: () => void;
+}
+
+export default function ApplicationReview({ applicationId, onBack }: ApplicationReviewProps) {
   const [data, setData] = useState<ApplicationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDecisionLoading, setIsDecisionLoading] = useState(false);
@@ -700,12 +751,40 @@ export default function ApplicationReview() {
 
   const handleExportPDF = async () => {
     try {
-      const response = await api.exportApplication(applicationId, 'pdf');
-      if ('downloadUrl' in response) {
-        window.open(response.downloadUrl, '_blank');
+      console.log('Starting PDF export for application:', applicationId);
+      
+      const pdfBlob = await api.exportApplication(applicationId, 'pdf');
+      
+      if (!pdfBlob || pdfBlob.size === 0) {
+        throw new Error('PDF blob is empty or invalid');
       }
+      
+      console.log('PDF blob received, size:', pdfBlob.size, 'type:', pdfBlob.type);
+      
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `application_${applicationId}_review.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('PDF download initiated successfully');
+      
     } catch (error) {
-      console.error("PDF export failed:", error);
+      console.error('PDF export failed:', error);
+      let errorMessage = 'PDF export failed. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('HTTP error')) {
+          errorMessage = 'Server error during PDF generation. Please try again later.';
+        } else if (error.message.includes('empty') || error.message.includes('invalid')) {
+          errorMessage = 'PDF file was not generated properly. Please try again.';
+        }
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -790,7 +869,13 @@ export default function ApplicationReview() {
       <div className="flex-1 flex flex-col">
         <header className="bg-white border-b p-4 flex justify-between items-center">
           <div className="flex items-center text-sm text-gray-600">
-            <span className="hover:text-blue-600 cursor-pointer">Applications</span>
+            <button 
+              onClick={onBack}
+              className="hover:text-blue-600 cursor-pointer flex items-center space-x-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Dashboard</span>
+            </button>
             <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
             <span className="text-gray-800 font-medium">Application Review</span>
           </div>
@@ -824,20 +909,10 @@ export default function ApplicationReview() {
                   <Printer className="h-4 w-4" />
                   <span>Print</span>
                 </button>
-                <button
-                  onClick={handleExportPDF}
-                  className="flex items-center space-x-2 bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Export PDF</span>
-                </button>
-                <button
-                  onClick={handleExportCSV}
-                  className="flex items-center space-x-2 bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Export CSV</span>
-                </button>
+                <ExportDropdown 
+                  onExportPDF={handleExportPDF}
+                  onExportCSV={handleExportCSV}
+                />
               </div>
             </div>
 
