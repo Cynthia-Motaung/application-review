@@ -22,7 +22,6 @@ export async function POST(
       );
     }
 
-    // Mock application data - in real implementation, fetch from database
     const mockApplicationData = {
       id: id,
       status: 'Pending Review',
@@ -66,7 +65,6 @@ export async function POST(
         },
       });
     } else {
-      // Simple PDF generation
       const pdfContent = `
         APPLICATION REVIEW REPORT
         ========================

@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, FolderOpen, LineChart, Bell, Settings,
-  Search, Filter, Plus, ChevronDown, Calendar, Download, Eye, ArrowLeft
+  Search, Filter, Plus, ChevronDown, Calendar, Download, Eye, ArrowLeft,
+  ChevronRight
 } from 'lucide-react';
 import ApplicationReview from '../components/ApplicationReview';
+import PaymentDashboard from '../components/PaymentDashboard';
 
 interface ApplicationSummary {
   id: number;
@@ -22,7 +24,7 @@ const DashboardPage = () => {
   const [applications, setApplications] = useState<ApplicationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'review'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'review' | 'payments'>('dashboard');
   const [selectedApplicationId, setSelectedApplicationId] = useState<number | null>(null);
 
   const navItems = [
@@ -43,10 +45,8 @@ const DashboardPage = () => {
   ];
 
   useEffect(() => {
-    // Mock data fetch
     const fetchApplications = async () => {
       setIsLoading(true);
-      // Simulate API call
       setTimeout(() => {
         setApplications([
           { id: 12345, studentName: 'John Smith', parentName: 'Sarah Smith', grade: '5', status: 'Pending Review', submittedDate: '2024-01-15', riskLevel: 'Medium' },
@@ -70,6 +70,16 @@ const DashboardPage = () => {
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
     setSelectedApplicationId(null);
+  };
+
+  const handleNavItemClick = (itemName: string) => {
+    setActive(itemName);
+    
+    if (itemName === 'Payments') {
+      setCurrentView('payments');
+    } else if (itemName === 'Dashboard') {
+      setCurrentView('dashboard');
+    }
   };
 
   const getStatusColor = (status: ApplicationSummary['status']) => {
@@ -97,7 +107,6 @@ const DashboardPage = () => {
     app.id.toString().includes(searchTerm)
   );
 
-  // If we're in review view, show the ApplicationReview component
   if (currentView === 'review' && selectedApplicationId) {
     return (
       <ApplicationReview 
@@ -107,10 +116,80 @@ const DashboardPage = () => {
     );
   }
 
-  // Otherwise, show the dashboard
+  if (currentView === 'payments') {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <aside className="hidden md:flex flex-col w-64 bg-white border-r">
+          <div className="px-6 py-4 border-b flex items-center gap-2">
+            <div className="p-2 rounded bg-blue-50">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-blue-700">SchoolRegister Admin</h2>
+          </div>
+
+          <nav className="flex-1 p-4 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = active === item.name;
+              return (
+                <button
+                  key={item.name}
+                  onClick={() => handleNavItemClick(item.name)}
+                  className={`flex items-center w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
+                  {item.name}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="p-4 border-t">
+            <button className="flex items-center text-sm text-gray-600 hover:text-red-600">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </button>
+          </div>
+        </aside>
+
+        <div className="flex-1 flex flex-col">
+          <header className="bg-white border-b p-4 flex justify-between items-center">
+            <div className="flex items-center text-sm text-gray-600">
+              <button 
+                onClick={() => setCurrentView('dashboard')}
+                className="hover:text-blue-600 cursor-pointer flex items-center space-x-1"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Dashboard</span>
+              </button>
+              <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
+              <span className="text-gray-800 font-medium">Payment Status Tracking</span>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <button className="p-2 text-gray-500 hover:text-blue-600">
+                <Bell className="h-5 w-5" />
+              </button>
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
+                A
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 p-6">
+            <PaymentDashboard />
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r">
         <div className="px-6 py-4 border-b flex items-center gap-2">
           <div className="p-2 rounded bg-blue-50">
@@ -126,7 +205,7 @@ const DashboardPage = () => {
             return (
               <button
                 key={item.name}
-                onClick={() => setActive(item.name)}
+                onClick={() => handleNavItemClick(item.name)}
                 className={`flex items-center w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
@@ -148,7 +227,6 @@ const DashboardPage = () => {
         </div>
       </aside>
 
-      {/* Main Section */}
       <div className="flex-1 flex flex-col">
         <header className="bg-white border-b p-4 flex justify-between items-center">
           <div className="flex items-center text-sm text-gray-600">
@@ -166,7 +244,6 @@ const DashboardPage = () => {
         </header>
 
         <main className="flex-1 p-6 space-y-6">
-          {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, index) => (
               <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -185,7 +262,6 @@ const DashboardPage = () => {
             ))}
           </div>
 
-          {/* Applications Section */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

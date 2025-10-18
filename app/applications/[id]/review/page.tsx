@@ -10,7 +10,7 @@ export default function ApplicationReviewPage() {
   const applicationId = parseInt(params.id as string);
 
   const handleBack = () => {
-    router.push('/dashboard'); // or wherever your dashboard route is
+    router.push('/');
   };
 
   return (

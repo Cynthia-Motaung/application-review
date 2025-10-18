@@ -20,13 +20,7 @@ import {
 } from '@/types/application';
 import { api } from '@/lib/api';
 
-// --- Data Source Indicator Component ---
-interface DataSourceIndicatorProps {
-  isLive: boolean;
-  className?: string;
-}
-
-const DataSourceIndicator: React.FC<DataSourceIndicatorProps> = ({ 
+const DataSourceIndicator: React.FC<{ isLive: boolean; className?: string }> = ({ 
   isLive, 
   className = "" 
 }) => {
@@ -47,8 +41,6 @@ const DataSourceIndicator: React.FC<DataSourceIndicatorProps> = ({
   );
 };
 
-// --- CORE BUSINESS LOGIC HOOK (Risk Assessment) ---
-
 const getColorClasses = (color: string) => {
   switch (color) {
     case 'green':
@@ -64,7 +56,6 @@ const getColorClasses = (color: string) => {
   }
 };
 
-// Decision Recommendation Logic
 const getDecisionRecommendation = (creditColor: string, incomeColor: string): DecisionRecommendation => {
   if (creditColor === "grey" || incomeColor === "grey") 
     return { copy: 'Review', icon: ListOrdered, color: 'amber' };
@@ -98,11 +89,9 @@ const useRiskAssessment = (data: Partial<ApplicationData>): RiskData => {
     incomeRatio 
   } = data;
 
-  // Use either monthlyFee or monthlySchoolFees for backward compatibility
   const effectiveMonthlyFee = monthlyFee || monthlySchoolFees || 0;
   const effectiveDisposableIncome = disposableIncome || monthlyDisposableIncome || 0;
 
-  // Credit Risk Logic
   const creditResult = useMemo((): CreditResult => {
     if (!creditScore || creditRisk === 'Pending') {
       return { color: 'grey', copy: 'Pending...', band: null, description: 'Credit check pending.' };
@@ -129,7 +118,6 @@ const useRiskAssessment = (data: Partial<ApplicationData>): RiskData => {
     return { color, copy, band, description, score: creditScore };
   }, [creditScore, creditRisk]);
 
-  // Income Ratio Logic
   const incomeResult = useMemo((): IncomeResult => {
     const fees = effectiveMonthlyFee;
     const income = effectiveDisposableIncome;
@@ -154,12 +142,10 @@ const useRiskAssessment = (data: Partial<ApplicationData>): RiskData => {
     return { color, copy: `${ratioPct}% (${description})`, ratioPct, description };
   }, [effectiveMonthlyFee, effectiveDisposableIncome, incomeRatio]);
 
-  // Decision Recommendation
   const decisionRecommendation = useMemo((): DecisionRecommendation => {
     return getDecisionRecommendation(creditResult.color, incomeResult.color);
   }, [creditResult.color, incomeResult.color]);
 
-  // Header Badges - Only show Risk Flag for High risk
   const headerBadges = useMemo((): RiskBadge[] => {
     const badges: RiskBadge[] = [];
     
@@ -172,8 +158,6 @@ const useRiskAssessment = (data: Partial<ApplicationData>): RiskData => {
 
   return { creditResult, incomeResult, decisionRecommendation, headerBadges };
 };
-
-// --- HELPER COMPONENTS ---
 
 const Card = ({ title, children, className = "" }: { title?: string; children: React.ReactNode; className?: string }) => (
   <div className={`bg-white p-6 rounded-lg shadow-sm border border-gray-200 ${className}`}>
@@ -208,8 +192,6 @@ const InfoField = ({ icon: Icon, label, value }: { icon: React.ComponentType<any
   </div>
 );
 
-// --- MAIN COMPONENTS ---
-
 const ApplicantSummaryCard = ({ data, riskData }: { data: ApplicationData; riskData: RiskData }) => {
   const statusBadges = [
     <Badge key="status" status={data.status}>{data.status}</Badge>,
@@ -228,7 +210,6 @@ const ApplicantSummaryCard = ({ data, riskData }: { data: ApplicationData; riskD
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Learner Information */}
         <div>
           <h3 className="flex items-center font-semibold text-lg text-blue-600 mb-3">
             <User className="w-5 h-5 mr-2" /> Learner Information
@@ -241,7 +222,6 @@ const ApplicantSummaryCard = ({ data, riskData }: { data: ApplicationData; riskD
           </div>
         </div>
 
-        {/* Parent/Guardian Information */}
         <div>
           <h3 className="flex items-center font-semibold text-lg text-blue-600 mb-3">
             <Users className="w-5 h-5 mr-2" /> Parent/Guardian
@@ -262,7 +242,6 @@ const RiskAssessmentCard = ({ data, riskData }: { data: ApplicationData; riskDat
   const creditClasses = getColorClasses(riskData.creditResult.color);
   const incomeClasses = getColorClasses(riskData.incomeResult.color);
   
-  // Use either monthlyFee or monthlySchoolFees
   const monthlyFee = data.monthlyFee || data.monthlySchoolFees || 0;
   const disposableIncome = data.disposableIncome || data.monthlyDisposableIncome || 0;
   
@@ -272,7 +251,6 @@ const RiskAssessmentCard = ({ data, riskData }: { data: ApplicationData; riskDat
   return (
     <Card title="Risk Assessment">
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Credit Risk Block */}
         <div className={`p-4 rounded-lg border ${creditClasses.bg}`}>
           <h3 className="flex items-center font-semibold mb-2 text-lg">
             <ShieldAlert className="w-5 h-5 mr-2" /> Credit Risk: <span className="ml-1">{riskData.creditResult.copy}</span>
@@ -283,7 +261,6 @@ const RiskAssessmentCard = ({ data, riskData }: { data: ApplicationData; riskDat
           </p>
         </div>
 
-        {/* Income Ratio Block */}
         <div className={`p-4 rounded-lg border ${incomeClasses.bg}`}>
           <h3 className="flex items-center font-semibold mb-2 text-lg">
             <DollarSign className="w-5 h-5 mr-2" /> Income Ratio: {riskData.incomeResult.copy}
@@ -294,7 +271,6 @@ const RiskAssessmentCard = ({ data, riskData }: { data: ApplicationData; riskDat
         </div>
       </div>
 
-      {/* Fee-to-Income Ratio Visualization */}
       <h3 className="font-semibold text-lg text-gray-800 mt-6 mb-3 border-t pt-4">Fee-to-Income Ratio</h3>
       <div className="space-y-1">
         <div className="flex justify-between text-sm font-medium text-gray-700">
@@ -306,7 +282,6 @@ const RiskAssessmentCard = ({ data, riskData }: { data: ApplicationData; riskDat
           <span>{incomeFormatted}</span>
         </div>
         
-        {/* Progress Bar */}
         <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2 overflow-hidden">
           <div
             className={`h-2.5 rounded-full transition-all duration-500 ${getColorClasses(riskData.incomeResult.color).pill}`}
@@ -480,7 +455,6 @@ const DecisionActionsPanel = ({
         </div>
       </Card>
 
-      {/* Confirmation Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
@@ -660,7 +634,6 @@ const PreviewModal = ({
   );
 };
 
-// Export Dropdown Component
 const ExportDropdown = ({ 
   onExportPDF, 
   onExportCSV 
@@ -709,8 +682,6 @@ const ExportDropdown = ({
   );
 };
 
-// --- MAIN APPLICATION COMPONENT ---
-
 interface ApplicationReviewProps {
   applicationId: number;
   onBack: () => void;
@@ -742,10 +713,6 @@ export default function ApplicationReview({ applicationId, onBack }: Application
       try {
         const fetchedData = await api.getApplication(applicationId);
         setData(fetchedData);
-        
-        // Check if we're using live data or fallback
-        // In a real implementation, you might check a flag in the response
-        // For now, we'll assume successful API call means live data
         setDataSource('live');
       } catch (error) {
         console.error("Failed to fetch application data:", error);
@@ -785,16 +752,7 @@ export default function ApplicationReview({ applicationId, onBack }: Application
 
   const handleExportPDF = async () => {
     try {
-      console.log('Starting PDF export for application:', applicationId);
-      
       const pdfBlob = await api.exportApplication(applicationId, 'pdf');
-      
-      if (!pdfBlob || pdfBlob.size === 0) {
-        throw new Error('PDF blob is empty or invalid');
-      }
-      
-      console.log('PDF blob received, size:', pdfBlob.size, 'type:', pdfBlob.type);
-      
       const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -803,22 +761,9 @@ export default function ApplicationReview({ applicationId, onBack }: Application
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      console.log('PDF download initiated successfully');
-      
     } catch (error) {
       console.error('PDF export failed:', error);
-      let errorMessage = 'PDF export failed. Please try again.';
-      
-      if (error instanceof Error) {
-        if (error.message.includes('HTTP error')) {
-          errorMessage = 'Server error during PDF generation. Please try again later.';
-        } else if (error.message.includes('empty') || error.message.includes('invalid')) {
-          errorMessage = 'PDF file was not generated properly. Please try again.';
-        }
-      }
-      
-      alert(errorMessage);
+      alert('PDF export failed. Please try again.');
     }
   };
 
@@ -861,7 +806,6 @@ export default function ApplicationReview({ applicationId, onBack }: Application
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r">
         <div className="px-6 py-4 border-b flex items-center gap-2">
           <div className="p-2 rounded bg-blue-50">
@@ -899,7 +843,6 @@ export default function ApplicationReview({ applicationId, onBack }: Application
         </div>
       </aside>
 
-      {/* Main Section */}
       <div className="flex-1 flex flex-col">
         <header className="bg-white border-b p-4 flex justify-between items-center">
           <div className="flex items-center text-sm text-gray-600">
@@ -954,14 +897,12 @@ export default function ApplicationReview({ applicationId, onBack }: Application
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column */}
               <div className="lg:col-span-2 space-y-6">
                 <ApplicantSummaryCard data={data} riskData={riskData} />
                 <RiskAssessmentCard data={data} riskData={riskData} />
                 <DocumentsCard documents={data.documents} onPreviewDocument={previewDocument} />
               </div>
 
-              {/* Right Column */}
               <div className="space-y-6">
                 <DecisionRecommendationCard recommendation={riskData.decisionRecommendation} />
                 <DecisionActionsPanel

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Enhanced mock data with variants for different test cases
 const applicationVariants = {
   12345: {
     id: 12345,
@@ -126,7 +125,6 @@ export async function GET(
       );
     }
 
-    // Get application data from mock database
     const applicationData = applicationVariants[id as keyof typeof applicationVariants];
     
     if (!applicationData) {

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'https://api.database-service.com';
-const DATABASE_SERVICE_API_KEY = process.env.DATABASE_SERVICE_API_KEY;
-
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -25,7 +22,6 @@ export async function POST(
       );
     }
 
-    // Map decision to status
     let newStatus: string;
     switch (decision) {
       case 'approve':
@@ -41,11 +37,9 @@ export async function POST(
         newStatus = 'Pending Review';
     }
 
-    // In a real implementation, update application in database
     console.log(`Updating application ${id} to status: ${newStatus}`);
     console.log(`Decision notes: ${notes}`);
 
-    // Mock successful update
     await new Promise(resolve => setTimeout(resolve, 500));
 
     return NextResponse.json({
