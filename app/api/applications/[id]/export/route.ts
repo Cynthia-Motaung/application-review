@@ -1,60 +1,4 @@
-// app/api/applications/[id]/export/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-
-const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'https://api.database-service.com';
-const DATABASE_SERVICE_API_KEY = process.env.DATABASE_SERVICE_API_KEY;
-
-// Simple PDF content generator
-const generateSimplePDF = (applicationData: any): string => {
-  return `
-%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
-endobj
-4 0 obj
-<< /Length 400 >>
-stream
-BT
-/F1 12 Tf
-50 750 Td (Application Review Summary) Tj
-0 -20 Td (Application ID: ${applicationData.id}) Tj
-0 -15 Td (Student: ${applicationData.student?.name || 'N/A'}) Tj
-0 -15 Td (Grade: ${applicationData.student?.grade || 'N/A'}) Tj
-0 -15 Td (Status: ${applicationData.status || 'N/A'}) Tj
-0 -30 Td (Parent: ${applicationData.parent?.name || 'N/A'}) Tj
-0 -15 Td (Email: ${applicationData.parent?.email || 'N/A'}) Tj
-0 -15 Td (Phone: ${applicationData.parent?.phone || 'N/A'}) Tj
-0 -30 Td (Financial Information:) Tj
-0 -15 Td (Credit Score: ${applicationData.creditScore || 'N/A'}) Tj
-0 -15 Td (Monthly Fee: R${applicationData.monthlyFee || applicationData.monthlySchoolFees || '0'}) Tj
-0 -15 Td (Generated: ${new Date().toLocaleDateString('en-ZA')}) Tj
-ET
-endstream
-endobj
-5 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
-endobj
-xref
-0 6
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000254 00000 n 
-0000000521 00000 n 
-trailer
-<< /Size 6 /Root 1 0 R >>
-startxref
-612
-%%EOF
-`.trim();
-};
 
 export async function POST(
   request: NextRequest,
@@ -78,29 +22,41 @@ export async function POST(
       );
     }
 
-    // Fetch application data
-    const applicationResponse = await fetch(`${DATABASE_SERVICE_URL}/api/applications/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${DATABASE_SERVICE_API_KEY}`,
+    // Mock application data - in real implementation, fetch from database
+    const mockApplicationData = {
+      id: id,
+      status: 'Pending Review',
+      student: {
+        name: 'John Smith',
+        grade: 5,
+        dob: '2015-03-15',
+        previousSchool: 'Sunrise Elementary School'
       },
-    });
-
-    if (!applicationResponse.ok) {
-      throw new Error('Failed to fetch application data for export');
-    }
-
-    const applicationData = await applicationResponse.json();
+      parent: {
+        name: 'Sarah Smith',
+        phone: '+27 11 123 4567',
+        email: 'sarah.smith@example.com',
+        address: '123 Main Street, Johannesburg, 2000'
+      },
+      creditScore: 685,
+      monthlyFee: 8500,
+      monthlySchoolFees: 8500,
+      disposableIncome: 25000,
+      monthlyDisposableIncome: 25000,
+      creditRisk: 'Completed',
+      incomeRatio: 34,
+    };
 
     if (format === 'csv') {
       const csvContent = [
         'Application ID,Student Name,Grade,Date of Birth,Previous School',
-        `${applicationData.id},"${applicationData.student.name}",${applicationData.student.grade},${applicationData.student.dob},"${applicationData.student.previousSchool}"`,
+        `${mockApplicationData.id},"${mockApplicationData.student.name}",${mockApplicationData.student.grade},${mockApplicationData.student.dob},"${mockApplicationData.student.previousSchool}"`,
         '',
         'Parent Name,Email,Phone,Address',
-        `"${applicationData.parent.name}","${applicationData.parent.email}","${applicationData.parent.phone}","${applicationData.parent.address}"`,
+        `"${mockApplicationData.parent.name}","${mockApplicationData.parent.email}","${mockApplicationData.parent.phone}","${mockApplicationData.parent.address}"`,
         '',
         'Risk Assessment,Credit Score,Income Ratio,Monthly Fee,Disposable Income,Status',
-        `${applicationData.creditRisk},${applicationData.creditScore},${applicationData.incomeRatio},${applicationData.monthlyFee},${applicationData.disposableIncome},${applicationData.status}`
+        `${mockApplicationData.creditRisk},${mockApplicationData.creditScore},${mockApplicationData.incomeRatio},${mockApplicationData.monthlyFee},${mockApplicationData.disposableIncome},${mockApplicationData.status}`
       ].join('\n');
 
       return new NextResponse(csvContent, {
@@ -110,15 +66,41 @@ export async function POST(
         },
       });
     } else {
-      // Generate PDF directly
-      const pdfContent = generateSimplePDF(applicationData);
-      const pdfBuffer = Buffer.from(pdfContent);
-      
-      return new NextResponse(pdfBuffer, {
+      // Simple PDF generation
+      const pdfContent = `
+        APPLICATION REVIEW REPORT
+        ========================
+        
+        Application ID: ${id}
+        Generated: ${new Date().toLocaleDateString('en-ZA')}
+        
+        STUDENT INFORMATION
+        ------------------
+        Name: ${mockApplicationData.student.name}
+        Grade: ${mockApplicationData.student.grade}
+        Date of Birth: ${mockApplicationData.student.dob}
+        Previous School: ${mockApplicationData.student.previousSchool}
+        
+        PARENT INFORMATION
+        -----------------
+        Name: ${mockApplicationData.parent.name}
+        Email: ${mockApplicationData.parent.email}
+        Phone: ${mockApplicationData.parent.phone}
+        Address: ${mockApplicationData.parent.address}
+        
+        FINANCIAL ASSESSMENT
+        -------------------
+        Credit Score: ${mockApplicationData.creditScore}
+        Income Ratio: ${mockApplicationData.incomeRatio}%
+        Monthly Fee: R${mockApplicationData.monthlyFee}
+        Disposable Income: R${mockApplicationData.disposableIncome}
+        Status: ${mockApplicationData.status}
+      `;
+
+      return new NextResponse(pdfContent, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="application-${id}-export.pdf"`,
-          'Content-Length': pdfBuffer.length.toString(),
         },
       });
     }
