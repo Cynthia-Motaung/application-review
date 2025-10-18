@@ -1,7 +1,6 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 
-// This would connect to your actual database
+// Mock database - to be replaced with (supabase) database calls in production
 const mockApplications = [
   { id: 12345, studentName: 'John Smith', parentName: 'Sarah Smith', grade: '5', status: 'Pending Review', submittedDate: '2024-01-15', riskLevel: 'Medium' },
   { id: 12346, studentName: 'Emma Johnson', parentName: 'Michael Johnson', grade: '3', status: 'Approved', submittedDate: '2024-01-14', riskLevel: 'Low' },

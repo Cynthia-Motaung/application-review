@@ -41,38 +41,12 @@ export async function POST(
         newStatus = 'Pending Review';
     }
 
-    // Update application in database
-    const updateResponse = await fetch(`${DATABASE_SERVICE_URL}/api/applications/${id}/decision`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DATABASE_SERVICE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        decision,
-        notes,
-        newStatus,
-        timestamp: new Date().toISOString(),
-      }),
-    });
+    // In a real implementation, update application in database
+    console.log(`Updating application ${id} to status: ${newStatus}`);
+    console.log(`Decision notes: ${notes}`);
 
-    if (!updateResponse.ok) {
-      throw new Error(`Failed to update application: ${updateResponse.status}`);
-    }
-
-    // Add to timeline
-    await fetch(`${DATABASE_SERVICE_URL}/api/applications/${id}/timeline`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DATABASE_SERVICE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        event: `Decision: ${newStatus.toUpperCase()}`,
-        timestamp: new Date().toISOString(),
-        note: notes || undefined,
-      }),
-    });
+    // Mock successful update
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     return NextResponse.json({
       success: true,
